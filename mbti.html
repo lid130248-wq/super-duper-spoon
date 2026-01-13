@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>16型人格倾向测试（原创）</title>
+  <style>
+    :root{--bd:#e7e7e7;--txt:#111;--muted:#666;}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;max-width:860px;margin:24px auto;padding:0 14px;line-height:1.65;color:var(--txt);}
+    h1{font-size:26px;margin:8px 0 6px}
+    .muted{color:var(--muted);font-size:14px}
+    .card{border:1px solid var(--bd);border-radius:16px;padding:16px;margin:14px 0}
+    .qmeta{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .pill{font-size:12px;border:1px solid var(--bd);padding:4px 10px;border-radius:999px;color:var(--muted)}
+    .qtitle{font-weight:750;margin:10px 0 10px}
+    .opt{display:block;margin:9px 0;padding:10px 12px;border:1px solid #eee;border-radius:14px;cursor:pointer}
+    .opt:hover{border-color:#bbb}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    button{padding:10px 14px;border-radius:14px;border:1px solid #ddd;background:#fff;cursor:pointer}
+    button:hover{border-color:#aaa}
+    .bar{height:10px;border-radius:999px;background:#f2f2f2;overflow:hidden;border:1px solid var(--bd)}
+    .fill{height:100%;background:#111;width:50%}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:760px){.grid{grid-template-columns:1fr 1fr}}
+    .k{font-weight:700}
+    .mini{font-size:13px;color:var(--muted)}
+    code{background:#f6f6f6;padding:2px 6px;border-radius:6px}
+    a{color:inherit}
+  </style>
+</head>
+<body>
+  <h1>16型人格倾向测试（原创）</h1>
+  <div class="muted">
+    仅供娱乐与自我探索，不构成心理/医疗诊断；与官方 MBTI 无关。题目与文案为原创。
+  </div>
+
+  <div id="app" class="card"></div>
+
+  <div class="row">
+    <button id="prevBtn">上一步</button>
+    <button id="nextBtn">下一步</button>
+    <button id="restartBtn" style="display:none;">重测</button>
+    <button id="copyBtn" style="display:none;">复制结果摘要</button>
+  </div>
+
+<script>
+/**
+ * 计分规则：
+ * 每题给某一维度的一个端点加分，比如 {E:2} 或 {I:2}
+ * 最后每个维度比较两端分数：E vs I、S vs N、T vs F、J vs P
+ */
+const quiz = {
+  questions: [
+    // E / I
+    { dim:"E/I", text:"在一群不太熟的人里，你更常见的状态是？", options:[
+      {label:"越聊越来劲，能很快找到话题", score:{E:2}},
+      {label:"先观察一阵子，慢热但不排斥交流", score:{E:1,I:1}},
+      {label:"更想待在角落，聊多了会耗电", score:{I:2}},
+    ]},
+    { dim:"E/I", text:"周末安排更像哪种？", options:[
+      {label:"约人见面/出门走走，动起来更舒服", score:{E:2}},
+      {label:"看情况：有人约就去，没约就宅", score:{E:1,I:1}},
+      {label:"独处回血：追剧、做饭、整理、发呆", score:{I:2}},
+    ]},
+    { dim:"E/I", text:"遇到压力时，你更容易怎么处理？", options:[
+      {label:"找人聊聊，把情绪说出来更轻", score:{E:2}},
+      {label:"先憋着，等想清楚再分享一部分", score:{E:1,I:1}},
+      {label:"自己消化，等完全恢复再出现", score:{I:2}},
+    ]},
+
+    // S / N
+    { dim:"S/N", text:"你更信哪一种信息？", options:[
+      {label:"具体事实、可验证细节、靠谱经验", score:{S:2}},
+      {label:"事实+直觉都要，看哪个更合理", score:{S:1,N:1}},
+      {label:"大方向与可能性，先抓住趋势再说", score:{N:2}},
+    ]},
+    { dim:"S/N", text:"做决定时，你更在意？", options:[
+      {label:"现实可行：成本、资源、步骤清楚", score:{S:2}},
+      {label:"可行性和意义都重要，平衡一下", score:{S:1,N:1}},
+      {label:"愿景与潜力：值不值得、能不能做大", score:{N:2}},
+    ]},
+    { dim:"S/N", text:"别人讲故事，你更容易被什么吸引？", options:[
+      {label:"发生了什么、怎么做的、结果如何", score:{S:2}},
+      {label:"既听细节也听观点，取我需要的", score:{S:1,N:1}},
+      {label:"背后的隐喻、动机、下一步会怎样", score:{N:2}},
+    ]},
+
+    // T / F
+    { dim:"T/F", text:"朋友来求建议，你更像？", options:[
+      {label:"先把问题拆开：目标、约束、最优解", score:{T:2}},
+      {label:"先共情再分析：情绪和方案都照顾", score:{T:1,F:1}},
+      {label:"先抱住对方：让他感觉被理解最重要", score:{F:2}},
+    ]},
+    { dim:"T/F", text:"团队里出现冲突，你更常做的事是？", options:[
+      {label:"把规则/边界说清楚，按原则解决", score:{T:2}},
+      {label:"让双方都能被听见，再推动落地", score:{T:1,F:1}},
+      {label:"尽量缓和气氛，避免伤到关系", score:{F:2}},
+    ]},
+    { dim:"T/F", text:"评价一件事“好不好”，你更靠什么？", options:[
+      {label:"逻辑一致、结果有效、成本划算", score:{T:2}},
+      {label:"结果和感受都重要，看整体", score:{T:1,F:1}},
+      {label:"是否体面、是否温柔、是否让人舒服", score:{F:2}},
+    ]},
+
+    // J / P
+    { dim:"J/P", text:"出门旅行，你更像？", options:[
+      {label:"先把行程排好，心里踏实", score:{J:2}},
+      {label:"大框架有，细节临场调整", score:{J:1,P:1}},
+      {label:"随缘走走，想到哪儿算哪儿", score:{P:2}},
+    ]},
+    { dim:"J/P", text:"面对截止日期，你更像？", options:[
+      {label:"提前做完，越早越安心", score:{J:2}},
+      {label:"分段推进，留点缓冲", score:{J:1,P:1}},
+      {label:"临近爆发，压线冲刺也能搞定", score:{P:2}},
+    ]},
+    { dim:"J/P", text:"你对“计划被打乱”的耐受度？", options:[
+      {label:"很难受，最好提前沟通并改计划", score:{J:2}},
+      {label:"会不爽但能适应，尽快找替代方案", score:{J:1,P:1}},
+      {label:"还好，变化本来就是生活的一部分", score:{P:2}},
+    ]},
+  ],
+
+  // 结果文案：原创，给每个类型一个简短描述 + 两个建议
+  // 你要更像 16personalities 那种长文，也能继续扩充
+  typeBlurb: {
+    "INTJ": { name:"战略规划者", blurb:"喜欢用系统和长线思维掌控局面，独立、克制、目标感强。", tips:["把“想得很远”翻译成可执行的周计划","练习把标准说出来，别人才能配合你"]},
+    "INTP": { name:"逻辑探索者", blurb:"擅长抽象推理与拆解问题，追求自洽，讨厌被硬性框住。", tips:["给灵感设一个“收敛点”，把想法落地","别等完美，先交付 60 分版本"]},
+    "INFJ": { name:"洞察引导者", blurb:"敏感而有洞察，重意义与价值，常在安静里做深度判断。", tips:["把“太懂别人”分一点给自己","明确边界，别靠透支来维持关系"]},
+    "INFP": { name:"理想叙事者", blurb:"重真实感与内在价值，温柔但有原则，情绪体验细腻。", tips:["把理想拆成小动作，持续就会成","遇到冲突先讲需求，再讲立场"]},
+
+    "ISTJ": { name:"稳健执行者", blurb:"可靠、踏实、讲规矩，擅长把流程跑顺并持续输出。", tips:["允许自己偶尔“没那么标准”","把经验写成模板，省掉重复劳动"]},
+    "ISTP": { name:"冷静修理者", blurb:"动手能力强，遇事先观察再下手，喜欢用最短路径解决。", tips:["把思路讲出来，别人更容易配合","重要关系别只靠行动，偶尔也要表达"]},
+    "ISFJ": { name:"细致守护者", blurb:"体贴、稳定、愿意承担，擅长把生活照顾得井井有条。", tips:["把付出变成“可被看见的请求”","别把所有责任都揽在自己身上"]},
+    "ISFP": { name:"感受创作者", blurb:"审美敏锐，活在当下的体验里，温柔但不爱被控制。", tips:["给自由留一点结构，效率会更高","练习说“不”，保护你的精力"]},
+
+    "ENTJ": { name:"统筹推进者", blurb:"目标明确、行动强势，习惯快速做决定并推动结果。", tips:["把“效率”留一部分给人的感受","别把休息当浪费，它是续航"]},
+    "ENTP": { name:"点子策划者", blurb:"脑洞密集，爱辩论爱试错，擅长从新角度打破惯性。", tips:["把点子装进“项目清单”，逐个落地","冲动开新坑前先把旧坑收尾"]},
+    "ENFJ": { name:"关系组织者", blurb:"擅长带动氛围与凝聚团队，重视成长与共同目标。", tips:["别把所有人都背在肩上","学会把需求说得更直接"]},
+    "ENFP": { name:"灵感连接者", blurb:"热情外放、共情力强，擅长连接人和机会，讨厌单调。", tips:["用日程把热情保护起来","做选择时先定一个“主线目标”"]},
+
+    "ESTJ": { name:"秩序管理者", blurb:"务实、讲规则、执行力强，喜欢明确分工和可控进度。", tips:["用“解释原因”替代“直接命令”","允许别人用不同方式达成结果"]},
+    "ESTP": { name:"现场操盘者", blurb:"反应快、敢上手，擅长在变化里抓机会，行动比空想强。", tips:["把风险前置：先设底线再冲","大决定前睡一觉，别让刺激带节奏"]},
+    "ESFJ": { name:"氛围照料者", blurb:"社交敏锐、愿意照顾人，擅长维系关系与让团队舒服。", tips:["讨好不是义务，边界更重要","把照顾别人也分给自己"]},
+    "ESFP": { name:"快乐带电者", blurb:"感染力强，活在体验里，擅长把普通日子过得有趣。", tips:["用一点点计划换来更大的自由","情绪上头时先暂停再回应"]},
+  }
+};
+
+let idx = 0;
+let answers = Array(quiz.questions.length).fill(null);
+
+function emptyScore(){
+  return {E:0,I:0,S:0,N:0,T:0,F:0,J:0,P:0};
+}
+function addScore(total, s){
+  for(const k in s){ total[k] = (total[k]||0) + s[k]; }
+}
+function calcType(){
+  const total = emptyScore();
+  quiz.questions.forEach((q, qi)=>{
+    const ai = answers[qi];
+    if(ai==null) return;
+    addScore(total, q.options[ai].score);
+  });
+  const EorI = total.E >= total.I ? "E" : "I";
+  const SorN = total.S >= total.N ? "S" : "N";
+  const TorF = total.T >= total.F ? "T" : "F";
+  const JorP = total.J >= total.P ? "J" : "P";
+  return { type: EorI+SorN+TorF+JorP, total };
+}
+function pct(a,b){
+  const sum = a+b;
+  if(sum===0) return 50;
+  return Math.round((a/sum)*100);
+}
+function render(){
+  const app = document.getElementById("app");
+  const q = quiz.questions[idx];
+
+  document.getElementById("prevBtn").style.display = idx === 0 ? "none" : "inline-block";
+  document.getElementById("nextBtn").style.display = "inline-block";
+  document.getElementById("restartBtn").style.display = "none";
+  document.getElementById("copyBtn").style.display = "none";
+
+  const { total } = calcType();
+
+  const dims = [
+    {left:"E", right:"I", label:"外向 E / 内向 I"},
+    {left:"S", right:"N", label:"实感 S / 直觉 N"},
+    {left:"T", right:"F", label:"思考 T / 情感 F"},
+    {left:"J", right:"P", label:"判断 J / 知觉 P"},
+  ];
+
+  app.innerHTML = `
+    <div class="qmeta">
+      <span class="pill">第 ${idx+1} / ${quiz.questions.length} 题</span>
+      <span class="pill">维度：${q.dim}</span>
+    </div>
+
+    <p class="qtitle">${q.text}</p>
+
+    ${q.options.map((o, i) => {
+      const active = answers[idx] === i ? 'style="border-color:#999"' : "";
+      return `<label class="opt" ${active}>
+        <input type="radio" name="opt" value="${i}" ${answers[idx]===i?"checked":""} />
+        ${o.label}
+      </label>`;
+    }).join("")}
+
+    <div class="card">
+      <div class="k">当前倾向（实时预览）</div>
+      <div class="grid">
+        ${dims.map(d=>{
+          const lp = pct(total[d.left], total[d.right]);
+          return `
+            <div>
+              <div class="mini">${d.label}</div>
+              <div class="row" style="justify-content:space-between">
+                <span class="mini">${d.left}</span><span class="mini">${lp}% / ${100-lp}%</span><span class="mini">${d.right}</span>
+              </div>
+              <div class="bar"><div class="fill" style="width:${lp}%"></div></div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+      <div class="muted" style="margin-top:8px">提示：这只是倾向，不是命运。做题时选“你更常这样”，别选“你希望这样”。</div>
+    </div>
+  `;
+
+  app.querySelectorAll('input[name="opt"]').forEach(r => {
+    r.addEventListener("change", e => { answers[idx] = Number(e.target.value); render(); });
+  });
+}
+
+function showResult(){
+  const app = document.getElementById("app");
+  const { type, total } = calcType();
+  const r = quiz.typeBlurb[type] || { name:"混合型", blurb:"你的答案比较均衡，可能会在不同场景切换策略。", tips:["回想你在压力下的反应更像哪边","用你最稳定的做事方式当主轴"]};
+
+  document.getElementById("prevBtn").style.display = "none";
+  document.getElementById("nextBtn").style.display = "none";
+  document.getElementById("restartBtn").style.display = "inline-block";
+  document.getElementById("copyBtn").style.display = "inline-block";
+
+  const dims = [
+    ["E","I","外向/内向"],
+    ["S","N","实感/直觉"],
+    ["T","F","思考/情感"],
+    ["J","P","判断/知觉"],
+  ];
+
+  const lines = dims.map(([a,b,cn])=>{
+    const p = pct(total[a], total[b]);
+    return `${cn}：${a}${p}% / ${b}${100-p}%`;
+  }).join("\n");
+
+  app.innerHTML = `
+    <h2>你的类型：<code>${type}</code>（${r.name}）</h2>
+    <p>${r.blurb}</p>
+
+    <div class="card">
+      <div class="k">维度明细</div>
+      <pre style="white-space:pre-wrap;margin:10px 0 0">${lines}</pre>
+    </div>
+
+    <div class="card">
+      <div class="k">给你的两条建议</div>
+      <ol>${r.tips.map(t=>`<li>${t}</li>`).join("")}</ol>
+    </div>
+
+    <div class="muted">
+      如果你要变现：把“更详细解读/关系建议/职业建议”做成付费项，用户把这个结果截图发你，你给个性化解读就行。
+    </div>
+  `;
+
+  document.getElementById("copyBtn").onclick = async () => {
+    const summary = `我的16型人格倾向测试结果：${type}（${r.name}）\n${lines}\n（仅供娱乐与自我探索）`;
+    try{
+      await navigator.clipboard.writeText(summary);
+      alert("已复制到剪贴板");
+    }catch(e){
+      alert("复制失败：可能是浏览器权限限制。你可以手动截图结果页。");
+    }
+  };
+}
+
+document.getElementById("prevBtn").onclick = () => { if(idx>0){ idx--; render(); } };
+document.getElementById("nextBtn").onclick = () => {
+  if(answers[idx] === null){ alert("先选一个选项"); return; }
+  if(idx < quiz.questions.length-1){ idx++; render(); }
+  else { showResult(); }
+};
+document.getElementById("restartBtn").onclick = () => { idx = 0; answers = Array(quiz.questions.length).fill(null); render(); };
+
+render();
+</script>
+</body>
+</html>
