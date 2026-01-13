@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>依恋风格小测试</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;max-width:780px;margin:24px auto;padding:0 14px;line-height:1.6}
+    .card{border:1px solid #e6e6e6;border-radius:14px;padding:16px;margin:14px 0}
+    .qtitle{font-weight:700;margin:0 0 10px}
+    .opt{display:block;margin:8px 0;padding:10px 12px;border:1px solid #eee;border-radius:12px;cursor:pointer}
+    .opt:hover{border-color:#bbb}
+    button{padding:10px 14px;border-radius:12px;border:1px solid #ddd;background:#fff;cursor:pointer}
+    button:hover{border-color:#aaa}
+    .muted{color:#666;font-size:14px}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+  </style>
+</head>
+<body>
+  <h1>依恋风格小测试</h1>
+  <p class="muted">娱乐与自我探索用途，不构成医疗/心理诊断。你可以把题目和结果文案改成你自己的版本。</p>
+
+  <div id="app" class="card"></div>
+
+  <div class="row">
+    <button id="prevBtn">上一步</button>
+    <button id="nextBtn">下一步</button>
+    <button id="restartBtn" style="display:none;">重测</button>
+  </div>
+
+<script>
+const quiz = {
+  title: "依恋风格小测试",
+  // 计分：每题选项对应给三种类型加分（你可以改成四象限/多维度都行）
+  questions: [
+    {
+      text: "当对方回复变慢时，你更常出现的反应是？",
+      options: [
+        { label: "会反复想是不是我做错了什么", score: { anxious: 2, avoidant: 0, secure: 0 } },
+        { label: "我会先做别的事，不太受影响", score: { anxious: 0, avoidant: 0, secure: 2 } },
+        { label: "我会告诉自己别在意，尽量不去想", score: { anxious: 0, avoidant: 2, secure: 0 } },
+      ]
+    },
+    {
+      text: "在亲密关系里，你更怕的是？",
+      options: [
+        { label: "被抛下、被忽略", score: { anxious: 2, avoidant: 0, secure: 0 } },
+        { label: "被控制、失去空间", score: { anxious: 0, avoidant: 2, secure: 0 } },
+        { label: "沟通不畅导致误会", score: { anxious: 0, avoidant: 0, secure: 2 } },
+      ]
+    },
+    {
+      text: "发生矛盾时，你更像？",
+      options: [
+        { label: "想立刻谈清楚，越拖越难受", score: { anxious: 2, avoidant: 0, secure: 0 } },
+        { label: "先冷静一下，可能会先躲开冲突", score: { anxious: 0, avoidant: 2, secure: 0 } },
+        { label: "能谈也能停，倾向找双方都舒服的节奏", score: { anxious: 0, avoidant: 0, secure: 2 } },
+      ]
+    },
+    {
+      text: "你对“依赖”更接近哪句话？",
+      options: [
+        { label: "我需要对方的确定感才能安心", score: { anxious: 2, avoidant: 0, secure: 0 } },
+        { label: "我更习惯自己消化，不太想麻烦别人", score: { anxious: 0, avoidant: 2, secure: 0 } },
+        { label: "适度依赖没问题，但也尊重彼此边界", score: { anxious: 0, avoidant: 0, secure: 2 } },
+      ]
+    },
+  ],
+  results: [
+    {
+      key: "anxious",
+      name: "焦虑型倾向",
+      blurb: "你很重视连接和回应，安全感主要来自“被看见、被确认”。",
+      tips: [
+        "把“需要”说成具体请求：比如“我希望你下班后回我一句就好”",
+        "设一个自我安抚动作：散步/写下最担心的3件事并逐条验证",
+        "把关注从对方反应拉回到你能控制的节奏上"
+      ]
+    },
+    {
+      key: "avoidant",
+      name: "回避型倾向",
+      blurb: "你珍惜自主和空间，压力一上来会本能地后撤来保护自己。",
+      tips: [
+        "用“我需要10分钟冷静”替代消失",
+        "练习表达边界而不是否定亲密：比如“我想要空间，但我也在乎你”",
+        "把冲突看成协商，不是入侵"
+      ]
+    },
+    {
+      key: "secure",
+      name: "相对安全型",
+      blurb: "你能在亲密和边界之间找到平衡，情绪起伏也更容易回到稳定。",
+      tips: [
+        "继续保持清晰沟通：感受—需求—请求三步走",
+        "遇到不安全感时，把它当信号而不是判决",
+        "用稳定的作息/关系仪式感巩固安全感"
+      ]
+    }
+  ]
+};
+
+let idx = 0;
+let answers = Array(quiz.questions.length).fill(null);
+
+function render(){
+  const app = document.getElementById("app");
+  const q = quiz.questions[idx];
+
+  document.getElementById("prevBtn").style.display = idx === 0 ? "none" : "inline-block";
+  document.getElementById("nextBtn").style.display = "inline-block";
+  document.getElementById("restartBtn").style.display = "none";
+
+  app.innerHTML = `
+    <div class="muted">第 ${idx+1} / ${quiz.questions.length} 题</div>
+    <p class="qtitle">${q.text}</p>
+    ${q.options.map((o, i) => {
+      const checked = answers[idx] === i ? 'style="border-color:#999"' : "";
+      return `<label class="opt" ${checked}>
+        <input type="radio" name="opt" value="${i}" ${answers[idx]===i?"checked":""} />
+        ${o.label}
+      </label>`;
+    }).join("")}
+  `;
+
+  app.querySelectorAll('input[name="opt"]').forEach(r => {
+    r.addEventListener("change", e => { answers[idx] = Number(e.target.value); render(); });
+  });
+}
+
+function calcResult(){
+  const score = { anxious:0, avoidant:0, secure:0 };
+  quiz.questions.forEach((q, qi) => {
+    const ai = answers[qi];
+    const s = q.options[ai].score;
+    Object.keys(score).forEach(k => score[k] += (s[k]||0));
+  });
+  const bestKey = Object.keys(score).sort((a,b)=>score[b]-score[a])[0];
+  return quiz.results.find(r => r.key === bestKey);
+}
+
+function showResult(){
+  const app = document.getElementById("app");
+  const r = calcResult();
+
+  document.getElementById("prevBtn").style.display = "none";
+  document.getElementById("nextBtn").style.display = "none";
+  document.getElementById("restartBtn").style.display = "inline-block";
+
+  app.innerHTML = `
+    <h2>你的结果：${r.name}</h2>
+    <p>${r.blurb}</p>
+    <div class="card">
+      <p class="qtitle">给你的3条建议</p>
+      <ol>${r.tips.map(t=>`<li>${t}</li>`).join("")}</ol>
+    </div>
+    <p class="muted">你也可以把结果页改成“购买解读版”：比如加一句“想要更详细的个性化解读，私信关键词”。</p>
+  `;
+}
+
+document.getElementById("prevBtn").onclick = () => { if(idx>0){ idx--; render(); } };
+document.getElementById("nextBtn").onclick = () => {
+  if(answers[idx] === null){ alert("先选一个选项"); return; }
+  if(idx < quiz.questions.length-1){ idx++; render(); }
+  else { showResult(); }
+};
+document.getElementById("restartBtn").onclick = () => { idx = 0; answers = Array(quiz.questions.length).fill(null); render(); };
+
+render();
+</script>
+</body>
+</html>
